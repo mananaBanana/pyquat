@@ -2,54 +2,58 @@ import numpy as np
 
 class Quaternion:
     def __init__(self, x, y, z, w):
+        """
+        Constructors a quaternion using x, y, z components and w
+        """
         self.q = np.zeros((4), dtype='float32') # Quaternion of shape (1, 4) x, y, z, w format
         self.q[0] = x
         self.q[1] = y
         self.q[2] = z
         self.q[3] = w
+        self.epsilon = 1e-6
         self.normalize()
 
-    def __str__(self):
-        return "{}".format(self.q)
-
-    def norm(self):
-        return np.sqrt(np.sum(np.square(self.q)))
-
-    def normalize(self):
-        self.q /= self.norm()
-
     @classmethod
-    def fromEuler(self, euler, sequence = "ZYX"):
+    def fromEuler(cls, euler, sequence = "ZYX"):
         X = euler[0]
         Y = euler[1]
         Z = euler[2]
         q_stack = []
 
-        qX = self.__class__(np.sin(X/2), 0, 0, np.cos(X/2))
-        qY = self.__class__(0, np.sin(Y/2), 0, np.cos(Y/2))
-        qZ = self.__class__(0, 0, np.sin(Z/2), np.cos(Z/2))
+        qX = cls(np.sin(X/2), 0, 0, np.cos(X/2))
+        qY = cls(0, np.sin(Y/2), 0, np.cos(Y/2))
+        qZ = cls(0, 0, np.sin(Z/2), np.cos(Z/2))
 
         for axis in sequence:
             if axis == "X":
                 q_stack.append(qX)
             elif axis == "Y":
                 q_stack.append(qY)
-            elif axix == "Z":
+            elif axis == "Z":
                 q_stack.append(qZ)
 
         return (q_stack[0] * q_stack[1]) * q_stack[2]
 
-    def x(self):
-        return self.q[0]
+    @classmethod
+    def identity(cls):
+        """
+        Identity Quaternion.
+        """
+        return cls(0, 0, 0, 1)
 
-    def y(self):
-        return self.q[1]
+    def __str__(self):
+        """
+        Print Quaternion values.
+        """
+        return "{}".format(self.q)
 
-    def z(self):
-        return self.q[2]
-
-    def w(self):
-        return self.q[3]
+    def __eq__(self, other):
+        """
+        Check for equality. 
+        If a quaternion is multiplied by its inverse you get identity. Using the same logic self is compared against other.
+        """
+        compq = self * other.inverse()
+        return compq.x() < self.epsilon and compq.y() < self.epsilon and compq.z() < self.epsilon and (compq.w() - 1 < self.epsilon or 1 - compq.w() < self.epsilon)
 
     def __mul__(self, other):
         """
@@ -63,7 +67,43 @@ class Quaternion:
 
         return self.__class__(q_res[0], q_res[1], q_res[2], q_res[3])
 
-    
+    def __add__(self, other):
+        """
+        Adding two quaternions is the same as multiplying them.
+        """
+        return self * other
+
+    def __sub__(self, other):
+        """
+        Subtracting a quaternion is multiplying by its inverse.
+        """
+        return self * other.inverse()
+
+    def norm(self):
+        """
+        Length, norm or magnitude of Quaternion.
+        """
+        return np.sqrt(np.sum(np.square(self.q)))
+
+    def normalize(self):
+        """
+        Normalize a quaternion and make it a unit quaternion.
+        """
+        if self.norm() > self.epsilon:
+            self.q /= self.norm()
+
+    def x(self):
+        return self.q[0]
+
+    def y(self):
+        return self.q[1]
+
+    def z(self):
+        return self.q[2]
+
+    def w(self):
+        return self.q[3]
+
     def inverse(self):
         """
         Invert the Quaternion. 
@@ -74,7 +114,7 @@ class Quaternion:
 
     def inverse_(self):
         """
-        Invert Quaternion in-place.
+        Invert the Quaternion in-place.
         """
         self.q[0] = -self.x()
         self.q[1] = -self.y()
